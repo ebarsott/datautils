@@ -10,15 +10,33 @@ class Lord(object):
         self._state = None
         self.process = None
         self._cbindex = 0
-        self.callbacks = {}
+        # Elizabeth: this code was throwing an error in def update: 'int' object not interable.  Trying this instead.
+        # self.callbacks = {} # Elizabeth: original
+        self.callbacks = [] # Elizabeth: test
 
     def attach(self, attr, func):
-        if attr not in self.callbacks:
-            self.callbacks[attr] = {}
-        cbid = self._cbindex
-        self._cbindex += 1
-        self.callbacks[attr][cbid] = func
+        ######################################################################
+        # Elizabeth: original code throwing TypeError: list indices mus bt integers or slices, not str
+        ######################################################################
+        #if attr not in self.callbacks: # Elizabeth: original
+            #self.callbacks[attr] = {} # Elizabeth: original
+        #cbid = self._cbindex
+        #self._cbindex += 1
+        #self.callbacks[attr][cbid] = func
+        #return cbid
+        ######################################################################
+        ######################################################################
+        # Elizabeth: try instead:
+        for callback in self.callbacks: # this works
+            if self.callbacks[callback] != attr: # this works
+                self.callbacks[callback] = [] # this works
+        cbid = self._cbindex # this works
+        self._cbindex += 1 # this works
+        for attribute in self.callbacks:
+            if self.callbacks[attribute] == attr:
+                self.callbacks[attribute][cbid] = func 
         return cbid
+        ######################################################################
 
     def detatch(self, cbid):
         for a in self.callbacks:
@@ -38,7 +56,7 @@ class Lord(object):
         raise serf.SerfError(*args, **kwargs)
 
     def send(self, attr, *args, **kwargs):
-        assert isinstance(attr, (str, unicode))
+        assert isinstance(attr, str)
         self.pipe.send((attr, args, kwargs))
 
     def start(self, serf_class, args=None, kwargs=None, wait=True):
@@ -64,10 +82,7 @@ class Lord(object):
         if not wait:
             return
         while self.process.is_alive():
-            try:
-                self.update()
-            except EOFError:
-                break
+            self.update()
         self.process.join()
         self.process = None
 
@@ -82,4 +97,5 @@ class Lord(object):
             if attr in self.callbacks:
                 [
                     self.callbacks[attr][cbid](*args, **kwargs)
-                    for cbid in self.callbacks[attr]]
+                    for cbid in self.callbacks[attr]] # Elizabeth: original
+                    #for cbid in range(len(self.callbacks[attr]))] # Elizabeth: test

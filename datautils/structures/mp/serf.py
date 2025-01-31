@@ -17,7 +17,7 @@ def parse_message(obj, msg):
     if len(msg) != 3:
         raise SerfMessageError('Invalid message len[%s] != 3' % len(msg))
     attr, args, kwargs = msg
-    if not isinstance(attr, (str, unicode)):
+    if not isinstance(attr, str):
         raise SerfMessageError(
             'Invalid attr type[%s] not str/unicode' % type(attr))
     if not isinstance(args, (list, tuple)):
@@ -48,7 +48,7 @@ class Serf(object):
         pass
 
     def send(self, attr, *args, **kwargs):
-        assert isinstance(attr, (str, unicode))
+        assert isinstance(attr, str)
         self.pipe.send((attr, args, kwargs))
 
     def error(self, *args, **kwargs):
@@ -72,12 +72,7 @@ class Serf(object):
                     self.send(attr, result)
             except Exception as e:
                 traceback.print_exc(file=sys.stdout)
-                # get traceback for exception
-                _, _, tb = sys.exc_info()
-                # convert to string
-                tbs = ''.join(traceback.format_tb(tb))
-                del tb
-                if self.error(str(e), tbs):
+                if self.error(str(e)):
                     break
                 else:
                     continue
@@ -100,7 +95,7 @@ class TimedSerf(Serf):
     @Serf.state.setter
     def state(self, value):
         if self._log is not None:
-            print value
+            print(value)
             self._log.write('%.6f,%s\n' % (time.time(), value))
         Serf.state.fset(self, value)
 
