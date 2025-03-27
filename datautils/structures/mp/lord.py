@@ -10,16 +10,14 @@ class Lord(object):
         self._state = None
         self.process = None
         self._cbindex = 0
-        # Elizabeth: this code was throwing an error in def update: 'int' object not interable.  Trying this instead.
-        # self.callbacks = {} # Elizabeth: original
-        self.callbacks = [] # Elizabeth: test
+        self.callbacks = {} 
 
     def attach(self, attr, func):
         ######################################################################
-        # Elizabeth: original code throwing TypeError: list indices mus bt integers or slices, not str
+        # Elizabeth: original code throwing TypeError: list indices must be integers or slices, not str
         ######################################################################
-        #if attr not in self.callbacks: # Elizabeth: original
-            #self.callbacks[attr] = {} # Elizabeth: original
+        #if attr not in self.callbacks: 
+            #self.callbacks[attr] = {} 
         #cbid = self._cbindex
         #self._cbindex += 1
         #self.callbacks[attr][cbid] = func
@@ -29,7 +27,7 @@ class Lord(object):
         # Elizabeth: try instead:
         for callback in self.callbacks: # this works
             if self.callbacks[callback] != attr: # this works
-                self.callbacks[callback] = [] # this works
+                self.callbacks[callback] = {} # this works
         cbid = self._cbindex # this works
         self._cbindex += 1 # this works
         for attribute in self.callbacks:
@@ -38,9 +36,17 @@ class Lord(object):
         return cbid
         ######################################################################
 
+    # Elizabeth: original code; returning int for callback id after changing definintion for attach above.
+    #def detatch(self, cbid):
+    #    for a in self.callbacks:
+    #        if cbid in self.callbacks[a]:
+    #            del self.callbacks[a][cbid]
+    #            return
+    #    raise ValueError("Callback id[%s] not found" % (cbid, ))
+    # Elizabeth: try instead:
     def detatch(self, cbid):
         for a in self.callbacks:
-            if cbid in self.callbacks[a]:
+            if self.callbacks[a] == cbid:
                 del self.callbacks[a][cbid]
                 return
         raise ValueError("Callback id[%s] not found" % (cbid, ))
@@ -88,14 +94,33 @@ class Lord(object):
 
     def __del__(self):
         self.stop(wait=True)
-
+        
     def update(self, timeout=0.001):
         if self.pipe.poll(timeout):
             msg = self.pipe.recv()
             attr, args, kwargs = serf.parse_message(self, msg)
             getattr(self, attr)(*args, **kwargs)
+
             if attr in self.callbacks:
-                [
-                    self.callbacks[attr][cbid](*args, **kwargs)
-                    for cbid in self.callbacks[attr]] # Elizabeth: original
+                cb_group = self.callbacks[attr]
+                if isinstance(cb_group, dict):
+                    for cb in cb_group.values():
+                        cb(*args, **kwargs)
+                elif isinstance(cb_group, list):
+                    for cb in cb_group:
+                        cb(*args, **kwargs)
+                elif callable(cb_group):
+                    cb_group(*args, **kwargs)
+
+
+    # Elizabeh: this is throwing an error
+    #def update(self, timeout=0.001):
+    #    if self.pipe.poll(timeout):
+    #        msg = self.pipe.recv()
+    #        attr, args, kwargs = serf.parse_message(self, msg)
+    #        getattr(self, attr)(*args, **kwargs)
+    #        if attr in self.callbacks:
+    #            [
+    #                self.callbacks[attr][cbid](*args, **kwargs)
+    #                for cbid in self.callbacks[attr]] # Elizabeth: original
                     #for cbid in range(len(self.callbacks[attr]))] # Elizabeth: test
